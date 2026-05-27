@@ -40,9 +40,7 @@ Beyond the single-page analysis, I generated internal linking recommendations fo
 
 ### Core Pipeline
 - `embed_all.py` — generates embeddings for all 47 pages and saves to `mgm_embeddings.json`
-- `find_similar.py` — finds semantically similar pages using standard cosine similarity
-- `find_similar_centered.py` — same, but with brand baseline removed
-- `test_embedding.py` — single-page test of the Gemini API integration
+- `find_similar_centered.py` — finds semantically similar pages with brand baseline removed
 
 ### Data
 - `mgm_pages_to_embed.json` — input dataset (47 filtered pages from the Screaming Frog crawl)
@@ -51,13 +49,14 @@ Beyond the single-page analysis, I generated internal linking recommendations fo
 ### Analysis & Recommendations
 - `all_pages_recommendations.py` — generates top 5 internal linking recommendations for every page on the site
 - `mgm_internal_linking_recommendations.csv` — CSV output with actionable linking suggestions for each page
+- `dashboard.py` — interactive marimo notebook visualizing semantic network as t-SNE graph
 
 ## Running It
 
 Install dependencies:
 
 ```bash
-pip install google-genai numpy
+pip install google-genai numpy marimo plotly scikit-learn
 ```
 
 Set your Gemini API key:
@@ -75,8 +74,9 @@ python3 embed_all.py
 Run similarity analysis:
 
 ```bash
-python3 find_similar.py           # Standard
-python3 find_similar_centered.py  # With brand baseline removed
+python3 find_similar_centered.py  # Find similar pages with brand signal removed
+python3 all_pages_recommendations.py  # Generate CSV recommendations for all pages
+marimo run dashboard.py  # Launch interactive network visualization
 ```
 
 ## What's NOT in This Version
@@ -86,10 +86,15 @@ This is a proof of concept. A production version would add:
 - **Boilerplate stripping** — currently embeds page text including shared navigation and footer language; stripping to content-area-only would reduce brand contamination at the source
 - **Full body content** — currently embeds title + meta + headings; embedding full body text would produce more topic-specific vectors
 - **Persistent storage** — currently saves to JSON; Postgres + pgvector would scale to thousands of pages and enable production querying
-- **Multi-page output** — currently runs against one target page at a time; production would generate a full internal linking table for every page on the site
-- **Visualization** — currently outputs to terminal; a clustering visualization would surface topic groups at a glance
+- **Multi-page similarity** — currently dashboard shows all-to-all; a filtered/faceted view would make large datasets even more digestible
 
 These are deliberate scope choices for the POC, not unknowns. The goal of this version was to validate the approach end-to-end and identify the brand contamination issue — both done.
+
+## Development Notes
+
+**Removed scripts (for reference):**
+- `test_embedding.py` — one-time API verification; functionality now included in `embed_all.py`
+- `find_similar.py` — superseded by `find_similar_centered.py` (which removes brand noise and produces cleaner results)
 
 ## Credits
 
