@@ -18,6 +18,16 @@ Running the pipeline against a 47-page slice of mgmresorts.com, with the Spas pa
 
 **Fix:** Added a centering step — calculate the average embedding across all 47 pages (the brand baseline), subtract it from each page before comparing. After centering, BetMGM dropped from 0.816 to 0.139, while Spas-Pools held its position. Cleaner signal, more confidence in what's real.
 
+## Scaled to All 47 Pages
+
+Beyond the single-page analysis, I generated internal linking recommendations for every page — top 5 semantic neighbors per page, saved to `mgm_internal_linking_recommendations.csv`. Three findings stood out:
+
+**Strongest cross-link opportunity:** Sports Tourism and Meetings are mutual top neighbors at 0.511 — clear B2B audience overlap, ship-it recommendation.
+
+**Most isolated page:** The MGM Collection with Marriott Bonvoy partnership scored 0.106 against its top neighbor — the most semantically orphaned page in the dataset. For a commercially important loyalty partnership page, that's a serious flag worth investigating.
+
+**Potential cannibalization:** Pools and the Things To Do hub are mutual top matches at 0.509 — high enough to suggest the two pages may be competing for the same queries. Either differentiate them, consolidate, or establish clear hierarchy through internal linking.
+
 ## How It Works
 
 1. **Crawl** — Screaming Frog produces a CSV of every page on the site with titles, meta descriptions, and headings
