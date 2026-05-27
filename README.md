@@ -28,12 +28,19 @@ Running the pipeline against a 47-page slice of mgmresorts.com, with the Spas pa
 
 ## Files
 
+### Core Pipeline
 - `embed_all.py` — generates embeddings for all 47 pages and saves to `mgm_embeddings.json`
 - `find_similar.py` — finds semantically similar pages using standard cosine similarity
 - `find_similar_centered.py` — same, but with brand baseline removed
 - `test_embedding.py` — single-page test of the Gemini API integration
+
+### Data
 - `mgm_pages_to_embed.json` — input dataset (47 filtered pages from the Screaming Frog crawl)
 - `mgm_embeddings.json` — output (pages with their 768-dimensional vectors attached)
+
+### Analysis & Recommendations
+- `all_pages_recommendations.py` — generates top 5 internal linking recommendations for every page on the site
+- `mgm_internal_linking_recommendations.csv` — CSV output with actionable linking suggestions for each page
 
 ## Running It
 
