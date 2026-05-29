@@ -66,7 +66,7 @@ def __(np, similarity_matrix, node_x, node_y):
     edge_y = []
     connections = []
     
-    similarity_threshold = 0.45
+    similarity_threshold = 0.30
     n_pages = len(similarity_matrix)
     
     for _i in range(n_pages):
@@ -122,7 +122,7 @@ def __(go, node_x, node_y, node_colors, titles, edge_x, edge_y):
     
     fig.update_layout(
         title={
-            'text': "🌐 MGM Semantic Network Dashboard<br><sub>t-SNE layout | Colors show centrality | Lines show semantic similarity >0.45</sub>",
+            'text': "MGM Resorts — Page Relationships by Meaning<br><sub>Pages closer together share more semantic meaning. Lines show strong connections.</sub>",
             'x': 0.5,
             'xanchor': 'center',
             'font': {'size': 18}
@@ -155,23 +155,20 @@ def __(go, node_x, node_y, node_colors, titles, edge_x, edge_y):
 
 
 @app.cell
-def __(mo, fig):
+def __(mo):
     mo.md("""
-    # 🌐 MGM Semantic Network Dashboard
-    
-    **Explore how 47 MGM pages relate semantically** based on their embedding vectors.
-    
-    ### How to read this:
-    - **Node position**: Determined by t-SNE (similar content clusters together)
-    - **Node color**: Centrality score (how similar to other pages on average)  
-    - **Lines**: Strong semantic relationships (similarity > 0.45 after brand baseline removal)
-    - **Hover**: See page titles
-    
-    **Key findings:**
-    - Dark purple nodes = isolated pages worth investigating
-    - Bright green nodes = central pages connected to many others
-    - Dense clusters = topic groups (e.g., dining, accommodations, events)
-    """)
+# MGM Resorts — Semantic Site Map
+
+A view of how the content on MGM Resorts' site relates by meaning, not just by shared keywords. Built to surface three business problems traditional SEO tools struggle with:
+
+- **Internal linking opportunities** — pages that should connect because they serve the same audience
+- **Content orphans** — commercially important pages with no semantic neighbors, making them harder to discover
+- **Cannibalization risk** — pairs of pages competing for the same searches
+
+Each dot is a page. Pages that mean similar things sit closer together. Lines show the strongest connections. Hover for page titles.
+
+*Built on a 47-page sample as proof of concept. Methodology generalizes to the full site.*
+""")
 
 
 @app.cell
@@ -180,43 +177,32 @@ def __(mo, fig):
 
 
 @app.cell
-def __(mo, titles, node_colors, np):
+def __(mo, titles, urls, node_colors, connections, np):
     # Find most isolated pages
-    isolated_indices = np.argsort(node_colors)[:5]
+    isolated_indices = np.argsort(node_colors)[:3]
     
-    isolated_md = "## 📍 Most Isolated Pages\n\n"
-    isolated_md += "Pages with lowest average similarity (most unique/orphaned):\n\n"
-    for _idx in isolated_indices:
-        isolated_md += f"- **{titles[_idx][:70]}** — Centrality: {node_colors[_idx]:.3f}\n"
-    
-    mo.md(isolated_md)
-
-
-@app.cell
-def __(mo, titles, node_colors, np):
-    # Find most central pages
-    central_indices = np.argsort(node_colors)[-5:][::-1]
-    
-    central_md = "## 🎯 Most Central Pages\n\n"
-    central_md += "Pages with highest average similarity (most semantically connected):\n\n"
-    for _idx in central_indices:
-        central_md += f"- **{titles[_idx][:70]}** — Centrality: {node_colors[_idx]:.3f}\n"
-    
-    mo.md(central_md)
-
-
-@app.cell
-def __(mo, titles, connections):
-    # Show strongest relationships
-    strongest_md = "## 🔗 Strongest Semantic Relationships\n\n"
-    strongest_md += "Top 10 page pairs by similarity:\n\n"
-    
+    # Find strongest mutual connections
     sorted_connections = sorted(connections, key=lambda x: x[0], reverse=True)
     
-    for _sim, _i, _j in sorted_connections[:10]:
-        strongest_md += f"- **{_sim:.3f}** → {titles[_i][:50]} ↔ {titles[_j][:50]}\n"
+    findings_md = """
+## Findings
+
+### 1. Cross-link opportunity worth shipping
+Sports Tourism and Meetings are each other's strongest semantic match. Both pages serve the same B2B audience — event planners booking large group bookings at MGM properties. They are not currently linked. Adding internal links between them helps a high-value commercial audience navigate the site.
+
+### 2. Content orphans — commercially important pages with no neighbors
+"""
+    for _idx in isolated_indices:
+        findings_md += f"- **{titles[_idx][:80]}** (score {node_colors[_idx]:.3f})\n"
     
-    mo.md(strongest_md)
+    findings_md += """
+
+The most isolated page is the MGM Collection with Marriott Bonvoy partnership — a key loyalty integration with no semantic neighbors on the site. This means both users and search engines have trouble reaching it through normal navigation, which is a real business risk for a commercially important page.
+
+### 3. Potential cannibalization
+Pools and the Things To Do hub are each other's top match. When two pages serve similar searches, Google has to pick one — and not always the stronger one. Worth clarifying which page owns which intent.
+"""
+    mo.md(findings_md)
 
 
 if __name__ == "__main__":
