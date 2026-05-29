@@ -1,6 +1,8 @@
 # MGM Embeddings — Semantic SEO Analysis Proof of Concept
 
-A proof-of-concept Python pipeline that uses vector embeddings to surface internal linking opportunities — the kind of semantic relationships that traditional keyword-based SEO tools miss. Built after reading Mike King's article on relevance engineering, this project takes a Screaming Frog crawl, generates embeddings for every page via the Google Gemini API, and ranks pages by cosine similarity. Tested on a 47-page sample of mgmresorts.com to validate the approach end-to-end, including a centering step to remove brand-level signal contamination.
+A proof-of-concept Python pipeline that uses vector embeddings to surface internal linking opportunities — the kind of semantic relationships that traditional keyword-based SEO tools miss.
+
+Built after reading Mike King's article on relevance engineering, this project takes a Screaming Frog crawl, generates embeddings for every page via the Google Gemini API, and ranks pages by cosine similarity. Tested on a 47-page sample of mgmresorts.com to validate the approach end-to-end.
 
 ## The Problem
 
@@ -8,48 +10,46 @@ Traditional SEO tools rank pages by keyword overlap — same words, related cont
 
 Vector embeddings close that gap. They convert page content into 768-dimensional vectors that represent meaning, not vocabulary. Pages with similar meanings produce similar vectors, even when they share few exact words. Measuring the distance between vectors gives an objective signal for internal linking, content clustering, and relevance scoring — the same kind of signal Google uses internally.
 
-## What I Found
+## Findings
 
-Running the pipeline against a 47-page slice of mgmresorts.com, with the Spas page as the test query:
+Three findings from the all-pages analysis stood out as worth flagging:
 
-**Real recommendation:** The Spas page and the Pools page scored 0.853 on cosine similarity — high enough that they should be cross-linking each other. Same audience, same trip-planning intent. The relationship survived after centering, which confirms it's a genuine topic relationship rather than a brand artifact.
+**Cross-link opportunity worth shipping.** Sports Tourism and Meetings are mutual top neighbors at 0.511. Both pages serve the same B2B audience — event planners booking large group bookings at MGM properties. They are not currently linked. Adding internal links between them helps a high-value commercial audience navigate the site.
 
-**Diagnosed limitation:** The first run surfaced BetMGM Sportsbooks at 0.816 against Spas — a false positive. The cause was brand-level signal contaminating the topic-level signal: every page on the site shares MGM's corporate framing, which artificially inflated similarity scores across the board.
+**Most isolated page.** The MGM Collection with Marriott Bonvoy partnership scored 0.106 against its top neighbor — the most semantically orphaned page in the dataset. For a commercially important loyalty partnership page, that's a real business risk. Both users and search engines have trouble reaching it through normal navigation.
 
-**Fix:** Added a centering step — calculate the average embedding across all 47 pages (the brand baseline), subtract it from each page before comparing. After centering, BetMGM dropped from 0.816 to 0.139, while Spas-Pools held its position. Cleaner signal, more confidence in what's real.
+**Potential cannibalization.** Pools and the Things To Do hub are mutual top matches at 0.509 — high enough to suggest the two pages may be competing for the same searches. Worth clarifying which page owns which intent, then using internal linking to establish hierarchy.
 
-## Scaled to All 47 Pages
+These are observations from the analysis, not recommendations to ship blind. The next step is bringing the team's context to confirm which findings are worth acting on.
 
-Beyond the single-page analysis, I generated internal linking recommendations for every page — top 5 semantic neighbors per page, saved to `mgm_internal_linking_recommendations.csv`. Three findings stood out:
+## Methodology Note: Brand Baseline Removal
 
-**Strongest cross-link opportunity:** Sports Tourism and Meetings are mutual top neighbors at 0.511 — clear B2B audience overlap, ship-it recommendation.
+The first pass of the analysis surfaced false positives — pages scoring as highly similar when they shouldn't have. The cause was brand-level signal contaminating topic-level signal: every page on the site shares MGM's corporate framing, which artificially inflated similarity scores across the board.
 
-**Most isolated page:** The MGM Collection with Marriott Bonvoy partnership scored 0.106 against its top neighbor — the most semantically orphaned page in the dataset. For a commercially important loyalty partnership page, that's a serious flag worth investigating.
-
-**Potential cannibalization:** Pools and the Things To Do hub are mutual top matches at 0.509 — high enough to suggest the two pages may be competing for the same queries. Either differentiate them, consolidate, or establish clear hierarchy through internal linking.
+Fix: added a centering step that calculates the average embedding across all pages, then subtracts it from each page before comparing. What's left is topic-specific signal with the brand baseline removed. All findings above use the centered analysis.
 
 ## How It Works
 
 1. **Crawl** — Screaming Frog produces a CSV of every page on the site with titles, meta descriptions, and headings
 2. **Filter** — keep only 200-OK, indexable pages with >100 words (47 pages from 299 total URLs)
 3. **Embed** — send each page's text to the Gemini embedding API; receive a 768-dimensional vector representing the page's meaning
-4. **Compare** — for any target page, compute cosine similarity against every other page; rank the results
-5. **Center (optional)** — subtract the site-wide average embedding before comparison to remove brand baseline noise
+4. **Center** — subtract the site-wide average embedding to remove brand baseline noise
+5. **Compare** — for any target page, compute cosine similarity against every other page; rank the results
 
 ## Files
 
 ### Core Pipeline
 - `embed_all.py` — generates embeddings for all 47 pages and saves to `mgm_embeddings.json`
 - `find_similar_centered.py` — finds semantically similar pages with brand baseline removed
+- `all_pages_recommendations.py` — generates top 5 internal linking recommendations for every page
 
 ### Data
 - `mgm_pages_to_embed.json` — input dataset (47 filtered pages from the Screaming Frog crawl)
 - `mgm_embeddings.json` — output (pages with their 768-dimensional vectors attached)
+- `mgm_internal_linking_recommendations.csv` — actionable linking suggestions for each page
 
-### Analysis & Recommendations
-- `all_pages_recommendations.py` — generates top 5 internal linking recommendations for every page on the site
-- `mgm_internal_linking_recommendations.csv` — CSV output with actionable linking suggestions for each page
-- `dashboard.py` — interactive marimo notebook visualizing semantic network as t-SNE graph
+### Visualization
+- `dashboard.py` — interactive Marimo notebook visualizing the semantic network as a t-SNE graph
 
 ## Running It
 
@@ -71,12 +71,12 @@ Generate embeddings (one-time, ~1 minute):
 python3 embed_all.py
 ```
 
-Run similarity analysis:
+Run the analysis:
 
 ```bash
-python3 find_similar_centered.py  # Find similar pages with brand signal removed
-python3 all_pages_recommendations.py  # Generate CSV recommendations for all pages
-marimo run dashboard.py  # Launch interactive network visualization
+python3 find_similar_centered.py       # Single-page similarity with brand signal removed
+python3 all_pages_recommendations.py   # Generate CSV recommendations for all pages
+marimo run dashboard.py                # Launch interactive network visualization
 ```
 
 ## What's NOT in This Version
@@ -86,15 +86,9 @@ This is a proof of concept. A production version would add:
 - **Boilerplate stripping** — currently embeds page text including shared navigation and footer language; stripping to content-area-only would reduce brand contamination at the source
 - **Full body content** — currently embeds title + meta + headings; embedding full body text would produce more topic-specific vectors
 - **Persistent storage** — currently saves to JSON; Postgres + pgvector would scale to thousands of pages and enable production querying
-- **Multi-page similarity** — currently dashboard shows all-to-all; a filtered/faceted view would make large datasets even more digestible
+- **Multi-page filtering in the dashboard** — currently shows all-to-all; faceted views would make large datasets even more digestible
 
 These are deliberate scope choices for the POC, not unknowns. The goal of this version was to validate the approach end-to-end and identify the brand contamination issue — both done.
-
-## Development Notes
-
-**Removed scripts (for reference):**
-- `test_embedding.py` — one-time API verification; functionality now included in `embed_all.py`
-- `find_similar.py` — superseded by `find_similar_centered.py` (which removes brand noise and produces cleaner results)
 
 ## Credits
 
